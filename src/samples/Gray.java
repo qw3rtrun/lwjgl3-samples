@@ -1,5 +1,6 @@
 package samples;
 
+import com.sun.javafx.scene.shape.PathUtils;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -10,11 +11,14 @@ import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GLContext;
 import org.lwjgl.system.MemoryUtil;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
@@ -25,7 +29,7 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public class Main {
+public class Gray {
     // We need to strongly reference callback instances.
     private GLFWErrorCallback errorCallback;
     private GLFWKeyCallback keyCallback;
@@ -88,7 +92,6 @@ public class Main {
         glfwSetKeyCallback(window, keyCallback = new GLFWKeyCallback() {
             @Override
             public void invoke(long window, int key, int scancode, int action, int mods) {
-                System.out.println(window + " " + key + " " + scancode + " " + action + " " + mods);
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
                     glfwSetWindowShouldClose(window, GL11.GL_TRUE); // We will detect this in our rendering loop
             }
@@ -114,10 +117,7 @@ public class Main {
 
     private void initializeProgram() throws IOException, URISyntaxException {
         String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Main.vert").toURI())));
-        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Main.frag").toURI())));
-
-        System.out.println(vertexShader);
-        System.out.println(fragmentShader);
+        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Gray.frag").toURI())));
 
         ArrayList<Integer> shaderList = new ArrayList<>();
         shaderList.add( createShader( GL_VERTEX_SHADER, vertexShader ) );
@@ -236,6 +236,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        new Main().run();
+        new Gray().run();
     }
 }

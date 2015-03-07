@@ -10,7 +10,7 @@ import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GLContext;
 import org.lwjgl.system.MemoryUtil;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -25,7 +25,7 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public class Main {
+public class RGB {
     // We need to strongly reference callback instances.
     private GLFWErrorCallback errorCallback;
     private GLFWKeyCallback keyCallback;
@@ -38,9 +38,12 @@ public class Main {
     private int theProgram;
 
     private final float[] vertexPositions = {
-            0.5f, 0.75f, 0.0f, 1.0f,
-            0.75f, -0.75f, 0.0f, 1.0f,
-            -0.75f, -0.75f, 0.0f, 1.0f
+            0.5f,   0.75f,  0.0f,   1.0f,
+            0.75f,  -0.75f, 0.0f,   1.0f,
+            -0.75f, -0.75f, 0.0f,   1.0f,
+            1f,     0f,     0f,     1f,
+            0f,     1f,     0f,     1f,
+            0f,     0f,     1f,     1f
     };
 
     public void run() {
@@ -88,7 +91,6 @@ public class Main {
         glfwSetKeyCallback(window, keyCallback = new GLFWKeyCallback() {
             @Override
             public void invoke(long window, int key, int scancode, int action, int mods) {
-                System.out.println(window + " " + key + " " + scancode + " " + action + " " + mods);
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
                     glfwSetWindowShouldClose(window, GL11.GL_TRUE); // We will detect this in our rendering loop
             }
@@ -113,11 +115,8 @@ public class Main {
     }
 
     private void initializeProgram() throws IOException, URISyntaxException {
-        String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Main.vert").toURI())));
-        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Main.frag").toURI())));
-
-        System.out.println(vertexShader);
-        System.out.println(fragmentShader);
+        String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("RGB.vert").toURI())));
+        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("RGB.frag").toURI())));
 
         ArrayList<Integer> shaderList = new ArrayList<>();
         shaderList.add( createShader( GL_VERTEX_SHADER, vertexShader ) );
@@ -205,8 +204,7 @@ public class Main {
         GLContext.createFromCurrent();
 
         // Set the clear color
-        glClearColor(1.0f, 1.0f, 0.0f, 0.0f);
-
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
         initializeProgram();
         initializeVertexBuffer();
 
@@ -219,11 +217,14 @@ public class Main {
 
             glBindBuffer(GL15.GL_ARRAY_BUFFER, positionBufferObject);
             glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
             glVertexAttribPointer(0, 4, GL_FLOAT, false, 0, 0);
+            glVertexAttribPointer(1, 4, GL_FLOAT, false, 0, Float.BYTES*4*3);
 
             glDrawArrays(GL_TRIANGLES, 0, 3);
 
             glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
             glUseProgram(0);
 
             glfwSwapBuffers(window); // swap the color buffers
@@ -236,6 +237,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        new Main().run();
+        new RGB().run();
     }
 }
