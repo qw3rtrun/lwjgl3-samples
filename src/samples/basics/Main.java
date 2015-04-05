@@ -1,4 +1,4 @@
-package samples;
+package samples.basics;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;

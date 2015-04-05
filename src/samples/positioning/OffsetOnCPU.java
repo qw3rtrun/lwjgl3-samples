@@ -1,5 +1,6 @@
-package samples;
+package samples.positioning;
 
+import com.sun.javafx.geom.Vec2f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -17,7 +18,10 @@ import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
 import static org.lwjgl.glfw.Callbacks.errorCallbackPrint;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -25,7 +29,7 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public class RGB {
+public class OffsetOnCPU {
     // We need to strongly reference callback instances.
     private GLFWErrorCallback errorCallback;
     private GLFWKeyCallback keyCallback;
@@ -38,9 +42,9 @@ public class RGB {
     private int theProgram;
 
     private final float[] vertexPositions = {
-            0.5f,   0.75f,  0.0f,   1.0f,
-            0.75f,  -0.75f, 0.0f,   1.0f,
-            -0.75f, -0.75f, 0.0f,   1.0f,
+            0.0f,   2f,  2.0f,  2.0f,
+            0.0f,  -1f, 0.0f,   2.0f,
+            -1f, -1f, 0.0f,   2.0f,
             1f,     0f,     0f,     1f,
             0f,     1f,     0f,     1f,
             0f,     0f,     1f,     1f
@@ -79,7 +83,7 @@ public class RGB {
         glfwWindowHint(GLFW_VISIBLE, GL11.GL_FALSE); // the window will stay hidden after creation
         glfwWindowHint(GLFW_RESIZABLE, GL11.GL_TRUE); // the window will be resizable
 
-        int WIDTH = 300;
+        int WIDTH = 600;
         int HEIGHT = 300;
 
         // Create the window
@@ -115,8 +119,8 @@ public class RGB {
     }
 
     private void initializeProgram() throws IOException, URISyntaxException {
-        String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("RGB.vert").toURI())));
-        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("RGB.frag").toURI())));
+        String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("../basics/RGB.vert").toURI())));
+        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("../basics/RGB.frag").toURI())));
 
         ArrayList<Integer> shaderList = new ArrayList<>();
         shaderList.add( createShader( GL_VERTEX_SHADER, vertexShader ) );
@@ -191,7 +195,31 @@ public class RGB {
 
         positionBufferObject = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
-        glBufferData(GL_ARRAY_BUFFER, vertexPositionsBuffer, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertexPositionsBuffer, GL_STREAM_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    private Vec2f computePositionOffsets() {
+        float fLoopDuration = 5.0f;
+        float fScale = 3.14159f * 2.0f / fLoopDuration;
+        double fElapsedTime = (float) glfwGetTime();
+        double fCurrTimeThroughLoop = fElapsedTime % fLoopDuration;
+        return new Vec2f((float)cos(fCurrTimeThroughLoop * fScale) * 0.5f, (float)sin(fCurrTimeThroughLoop * fScale) * 0.5f);
+    }
+
+    private void adjustVertexData(Vec2f offser) {
+        float[] newData = Arrays.copyOf(vertexPositions, vertexPositions.length/2);
+        for (int iVertex = 0; iVertex < newData.length; iVertex += 4) {
+            newData[iVertex] += offser.x;
+            newData[iVertex + 1] += offser.y;
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+
+        FloatBuffer vertexPositionsBuffer = BufferUtils.createFloatBuffer(newData.length);
+        vertexPositionsBuffer.put(newData);
+        vertexPositionsBuffer.flip();
+
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexPositionsBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
@@ -211,6 +239,9 @@ public class RGB {
         // Run the rendering loop until the user has attempted to close
         // the window or has pressed the ESCAPE key.
         while (glfwWindowShouldClose(window) == GL_FALSE) {
+
+            adjustVertexData(computePositionOffsets());
+
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
 
             glUseProgram(theProgram);
@@ -237,6 +268,6 @@ public class RGB {
     }
 
     public static void main(String[] args) {
-        new RGB().run();
+        new OffsetOnCPU().run();
     }
 }

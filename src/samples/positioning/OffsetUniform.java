@@ -1,6 +1,6 @@
-package samples;
+package samples.positioning;
 
-import com.sun.javafx.scene.shape.PathUtils;
+import com.sun.javafx.geom.Vec2f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -13,15 +13,14 @@ import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
 import static org.lwjgl.glfw.Callbacks.errorCallbackPrint;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -29,7 +28,7 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public class Gray {
+public class OffsetUniform {
     // We need to strongly reference callback instances.
     private GLFWErrorCallback errorCallback;
     private GLFWKeyCallback keyCallback;
@@ -41,10 +40,15 @@ public class Gray {
 
     private int theProgram;
 
+    private int offsetLocation;
+
     private final float[] vertexPositions = {
-            0.5f, 0.75f, 0.0f, 1.0f,
-            0.75f, -0.75f, 0.0f, 1.0f,
-            -0.75f, -0.75f, 0.0f, 1.0f
+            0.0f,   2f,  2.0f,  2.0f,
+            0.0f,  -1f, 0.0f,   2.0f,
+            -1f, -1f, 0.0f,   2.0f,
+            1f,     0f,     0f,     1f,
+            0f,     1f,     0f,     1f,
+            0f,     0f,     1f,     1f
     };
 
     public void run() {
@@ -80,7 +84,7 @@ public class Gray {
         glfwWindowHint(GLFW_VISIBLE, GL11.GL_FALSE); // the window will stay hidden after creation
         glfwWindowHint(GLFW_RESIZABLE, GL11.GL_TRUE); // the window will be resizable
 
-        int WIDTH = 300;
+        int WIDTH = 600;
         int HEIGHT = 300;
 
         // Create the window
@@ -116,14 +120,16 @@ public class Gray {
     }
 
     private void initializeProgram() throws IOException, URISyntaxException {
-        String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Main.vert").toURI())));
-        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("Gray.frag").toURI())));
+        String vertexShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("offset.vert").toURI())));
+        String fragmentShader = new String(Files.readAllBytes(Paths.get(getClass().getResource("../basics/RGB.frag").toURI())));
 
         ArrayList<Integer> shaderList = new ArrayList<>();
         shaderList.add( createShader( GL_VERTEX_SHADER, vertexShader ) );
         shaderList.add( createShader( GL_FRAGMENT_SHADER, fragmentShader ) );
 
         theProgram = createProgram( shaderList );
+
+        offsetLocation = glGetUniformLocation(theProgram, "offset");
 
         for ( Integer shader : shaderList ) {
             glDeleteShader( shader );
@@ -192,8 +198,16 @@ public class Gray {
 
         positionBufferObject = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
-        glBufferData(GL_ARRAY_BUFFER, vertexPositionsBuffer, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertexPositionsBuffer, GL_STREAM_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    private Vec2f computePositionOffsets() {
+        float fLoopDuration = 5.0f;
+        float fScale = 3.14159f * 2.0f / fLoopDuration;
+        double fElapsedTime = (float) glfwGetTime();
+        double fCurrTimeThroughLoop = fElapsedTime % fLoopDuration;
+        return new Vec2f((float)cos(fCurrTimeThroughLoop * fScale) * 0.5f, (float)sin(fCurrTimeThroughLoop * fScale) * 0.5f);
     }
 
     private void loop() throws IOException, URISyntaxException {
@@ -205,25 +219,32 @@ public class Gray {
         GLContext.createFromCurrent();
 
         // Set the clear color
-        glClearColor(1.0f, 1.0f, 0.0f, 0.0f);
-
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
         initializeProgram();
         initializeVertexBuffer();
 
         // Run the rendering loop until the user has attempted to close
         // the window or has pressed the ESCAPE key.
         while (glfwWindowShouldClose(window) == GL_FALSE) {
+
+            Vec2f offset = computePositionOffsets();
+
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
 
             glUseProgram(theProgram);
 
+            glUniform2f(offsetLocation, offset.x, offset.y);
+
             glBindBuffer(GL15.GL_ARRAY_BUFFER, positionBufferObject);
             glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
             glVertexAttribPointer(0, 4, GL_FLOAT, false, 0, 0);
+            glVertexAttribPointer(1, 4, GL_FLOAT, false, 0, Float.BYTES*4*3);
 
             glDrawArrays(GL_TRIANGLES, 0, 3);
 
             glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
             glUseProgram(0);
 
             glfwSwapBuffers(window); // swap the color buffers
@@ -236,6 +257,6 @@ public class Gray {
     }
 
     public static void main(String[] args) {
-        new Gray().run();
+        new OffsetUniform().run();
     }
 }
