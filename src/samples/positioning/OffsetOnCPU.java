@@ -8,6 +8,7 @@ import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.glfw.GLFWvidmode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 import org.lwjgl.system.MemoryUtil;
 
@@ -128,9 +129,7 @@ public class OffsetOnCPU {
 
         theProgram = createProgram( shaderList );
 
-        for ( Integer shader : shaderList ) {
-            glDeleteShader( shader );
-        }
+        shaderList.forEach(GL20::glDeleteShader);
     }
 
     private int createShader(int shaderType, String shaderFile) {
