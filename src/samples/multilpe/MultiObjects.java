@@ -1,12 +1,12 @@
-package samples.positioning;
+package samples.multilpe;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
+import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.glfw.GLFWvidmode;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 import org.lwjgl.system.MemoryUtil;
@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -24,9 +25,11 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL30.glBindVertexArray;
+import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public class MatrixProjection {
+public class MultiObjects {
     // We need to strongly reference callback instances.
     private GLFWErrorCallback errorCallback;
     private GLFWKeyCallback keyCallback;
@@ -37,7 +40,12 @@ public class MatrixProjection {
     int WIDTH = 600;
     int HEIGHT = 600;
 
-    private int positionBufferObject;
+    private int vertexBufferObject;
+
+    private int indexBufferObject;
+
+    private int vaoObject1;
+    private int vaoObject2;
 
     private int theProgram;
 
@@ -45,103 +53,124 @@ public class MatrixProjection {
 
     private int matrixLocation;
 
+    private final float RIGHT_EXTENT = 0.8f;
+    private final float LEFT_EXTENT = -RIGHT_EXTENT;
+    private final float TOP_EXTENT = 0.20f;
+    private final float MIDDLE_EXTENT = 0.0f;
+    private final float BOTTOM_EXTENT = -TOP_EXTENT;
+    private final float FRONT_EXTENT = -1.25f;
+    private final float REAR_EXTENT = -1.75f;
+
     private final float[] vertexPositions = {
-            0.25f, 0.25f, 1.25f, 1.0f,
-            0.25f, -0.25f, 1.25f, 1.0f,
-            -0.25f, 0.25f, 1.25f, 1.0f,
+            // Object 1 positions
+            LEFT_EXTENT, TOP_EXTENT, REAR_EXTENT,
+            LEFT_EXTENT, MIDDLE_EXTENT, FRONT_EXTENT,
+            RIGHT_EXTENT, MIDDLE_EXTENT, FRONT_EXTENT,
+            RIGHT_EXTENT, TOP_EXTENT, REAR_EXTENT,
 
-            0.25f, -0.25f, 1.25f, 1.0f,
-            -0.25f, -0.25f, 1.25f, 1.0f,
-            -0.25f, 0.25f, 1.25f, 1.0f,
+            LEFT_EXTENT, BOTTOM_EXTENT, REAR_EXTENT,
+            LEFT_EXTENT, MIDDLE_EXTENT, FRONT_EXTENT,
+            RIGHT_EXTENT, MIDDLE_EXTENT, FRONT_EXTENT,
+            RIGHT_EXTENT, BOTTOM_EXTENT, REAR_EXTENT,
 
-            0.25f, 0.25f, 2.75f, 1.0f,
-            -0.25f, 0.25f, 2.75f, 1.0f,
-            0.25f, -0.25f, 2.75f, 1.0f,
+            LEFT_EXTENT, TOP_EXTENT, REAR_EXTENT,
+            LEFT_EXTENT, MIDDLE_EXTENT, FRONT_EXTENT,
+            LEFT_EXTENT, BOTTOM_EXTENT, REAR_EXTENT,
 
-            0.25f, -0.25f, 2.75f, 1.0f,
-            -0.25f, 0.25f, 2.75f, 1.0f,
-            -0.25f, -0.25f, 2.75f, 1.0f,
+            RIGHT_EXTENT, TOP_EXTENT, REAR_EXTENT,
+            RIGHT_EXTENT, MIDDLE_EXTENT, FRONT_EXTENT,
+            RIGHT_EXTENT, BOTTOM_EXTENT, REAR_EXTENT,
 
-            -0.25f, 0.25f, 1.25f, 1.0f,
-            -0.25f, -0.25f, 1.25f, 1.0f,
-            -0.25f, -0.25f, 2.75f, 1.0f,
+            LEFT_EXTENT, BOTTOM_EXTENT, REAR_EXTENT,
+            LEFT_EXTENT, TOP_EXTENT, REAR_EXTENT,
+            RIGHT_EXTENT, TOP_EXTENT, REAR_EXTENT,
+            RIGHT_EXTENT, BOTTOM_EXTENT, REAR_EXTENT,
 
-            -0.25f, 0.25f, 1.25f, 1.0f,
-            -0.25f, -0.25f, 2.75f, 1.0f,
-            -0.25f, 0.25f, 2.75f, 1.0f,
+            // Object 2 positions
+            TOP_EXTENT, RIGHT_EXTENT, REAR_EXTENT,
+            MIDDLE_EXTENT, RIGHT_EXTENT, FRONT_EXTENT,
+            MIDDLE_EXTENT, LEFT_EXTENT, FRONT_EXTENT,
+            TOP_EXTENT, LEFT_EXTENT, REAR_EXTENT,
 
-            0.25f, 0.25f, 1.25f, 1.0f,
-            0.25f, -0.25f, 2.75f, 1.0f,
-            0.25f, -0.25f, 1.25f, 1.0f,
+            BOTTOM_EXTENT, RIGHT_EXTENT, REAR_EXTENT,
+            MIDDLE_EXTENT, RIGHT_EXTENT, FRONT_EXTENT,
+            MIDDLE_EXTENT, LEFT_EXTENT, FRONT_EXTENT,
+            BOTTOM_EXTENT, LEFT_EXTENT, REAR_EXTENT,
 
-            0.25f, 0.25f, 1.25f, 1.0f,
-            0.25f, 0.25f, 2.75f, 1.0f,
-            0.25f, -0.25f, 2.75f, 1.0f,
+            TOP_EXTENT, RIGHT_EXTENT, REAR_EXTENT,
+            MIDDLE_EXTENT, RIGHT_EXTENT, FRONT_EXTENT,
+            BOTTOM_EXTENT, RIGHT_EXTENT, REAR_EXTENT,
 
-            0.25f, 0.25f, 2.75f, 1.0f,
-            0.25f, 0.25f, 1.25f, 1.0f,
-            -0.25f, 0.25f, 1.25f, 1.0f,
+            TOP_EXTENT, LEFT_EXTENT, REAR_EXTENT,
+            MIDDLE_EXTENT, LEFT_EXTENT, FRONT_EXTENT,
+            BOTTOM_EXTENT, LEFT_EXTENT, REAR_EXTENT,
 
-            0.25f, 0.25f, 2.75f, 1.0f,
-            -0.25f, 0.25f, 1.25f, 1.0f,
-            -0.25f, 0.25f, 2.75f, 1.0f,
+            BOTTOM_EXTENT, RIGHT_EXTENT, REAR_EXTENT,
+            TOP_EXTENT, RIGHT_EXTENT, REAR_EXTENT,
+            TOP_EXTENT, LEFT_EXTENT, REAR_EXTENT,
+            BOTTOM_EXTENT, LEFT_EXTENT, REAR_EXTENT,
 
-            0.25f, -0.25f, 2.75f, 1.0f,
-            -0.25f, -0.25f, 1.25f, 1.0f,
-            0.25f, -0.25f, 1.25f, 1.0f,
+            // Object 1 colors
+            0.75f, 0.75f, 1.0f, 1.0f,   // GREEN_COLOR
+            0.75f, 0.75f, 1.0f, 1.0f,
+            0.75f, 0.75f, 1.0f, 1.0f,
+            0.75f, 0.75f, 1.0f, 1.0f,
 
-            0.25f, -0.25f, 2.75f, 1.0f,
-            -0.25f, -0.25f, 2.75f, 1.0f,
-            -0.25f, -0.25f, 1.25f, 1.0f,
+            0.0f, 0.5f, 0.0f, 1.0f,     // BLUE_COLOR
+            0.0f, 0.5f, 0.0f, 1.0f,
+            0.0f, 0.5f, 0.0f, 1.0f,
+            0.0f, 0.5f, 0.0f, 1.0f,
 
+            1.0f, 0.0f, 0.0f, 1.0f,     // RED_COLOR
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
 
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-
+            0.8f, 0.8f, 0.8f, 1.0f,     // GREY_COLOR
             0.8f, 0.8f, 0.8f, 1.0f,
             0.8f, 0.8f, 0.8f, 1.0f,
-            0.8f, 0.8f, 0.8f, 1.0f,
 
-            0.8f, 0.8f, 0.8f, 1.0f,
-            0.8f, 0.8f, 0.8f, 1.0f,
-            0.8f, 0.8f, 0.8f, 1.0f,
-
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-
+            0.5f, 0.5f, 0.0f, 1.0f,     // BROWN_COLOR
             0.5f, 0.5f, 0.0f, 1.0f,
             0.5f, 0.5f, 0.0f, 1.0f,
             0.5f, 0.5f, 0.0f, 1.0f,
 
+            // Object 2 colors
+            1.0f, 0.0f, 0.0f, 1.0f,     // RED_COLOR
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
+
+            0.5f, 0.5f, 0.0f, 1.0f,     // BROWN_COLOR
             0.5f, 0.5f, 0.0f, 1.0f,
             0.5f, 0.5f, 0.0f, 1.0f,
             0.5f, 0.5f, 0.0f, 1.0f,
 
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
+            0.0f, 0.5f, 0.0f, 1.0f,     // BLUE_COLOR
+            0.0f, 0.5f, 0.0f, 1.0f,
+            0.0f, 0.5f, 0.0f, 1.0f,
 
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
+            0.75f, 0.75f, 1.0f, 1.0f,   // GREEN_COLOR
+            0.75f, 0.75f, 1.0f, 1.0f,
+            0.75f, 0.75f, 1.0f, 1.0f,
 
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
+            0.8f, 0.8f, 0.8f, 1.0f,     // GREY_COLOR
+            0.8f, 0.8f, 0.8f, 1.0f,
+            0.8f, 0.8f, 0.8f, 1.0f,
+            0.8f, 0.8f, 0.8f, 1.0f
+    };
 
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f
+    private final short indexData[] = {
+            0, 2, 1,
+            3, 2, 0,
+
+            4, 5, 6,
+            6, 7, 4,
+
+            8, 9, 10,
+            11, 13, 12,
+
+            14, 16, 15,
+            17, 16, 14
     };
 
     public void run() {
@@ -175,7 +204,6 @@ public class MatrixProjection {
         // Configure our window
         glfwDefaultWindowHints(); // optional, the current window hints are already the default
         glfwWindowHint(GLFW_VISIBLE, GL11.GL_FALSE); // the window will stay hidden after creation
-        glfwWindowHint(GLFW_RESIZABLE, GL11.GL_FALSE); // the window will be resizable
 
         // Create the window
         window = glfwCreateWindow(WIDTH, HEIGHT, "Hello World!", MemoryUtil.NULL, MemoryUtil.NULL);
@@ -188,6 +216,15 @@ public class MatrixProjection {
             public void invoke(long window, int key, int scancode, int action, int mods) {
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
                     glfwSetWindowShouldClose(window, GL11.GL_TRUE); // We will detect this in our rendering loop
+            }
+        });
+
+        glfwSetWindowSizeCallback(window, new GLFWWindowSizeCallback() {
+            @Override
+            public void invoke(long window, int width, int height) {
+                System.out.println(width + " / " + height);
+                WIDTH = width;
+                HEIGHT = height;
             }
         });
 
@@ -285,11 +322,51 @@ public class MatrixProjection {
         vertexPositionsBuffer.put(vertexPositions);
         vertexPositionsBuffer.flip();
 
-        positionBufferObject = glGenBuffers();
-        glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+        vertexBufferObject = glGenBuffers();
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
         glBufferData(GL_ARRAY_BUFFER, vertexPositionsBuffer, GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        ShortBuffer indexDataBuffer = BufferUtils.createShortBuffer(indexData.length);
+        indexDataBuffer.put(indexData);
+        indexDataBuffer.flip();
+
+        indexBufferObject = glGenBuffers();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataBuffer, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
+
+    private void initializeVertexArrayObjects() {
+        vaoObject1 = glGenVertexArrays();
+        glBindVertexArray(vaoObject1);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+        final int numberOfVertices = 36;
+        int colorDataOffset = Float.BYTES * 3 * numberOfVertices;
+        glVertexAttribPointer(1, 4, GL_FLOAT, false, 0, colorDataOffset);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject);
+
+        glBindVertexArray(0);
+
+        vaoObject2 = glGenVertexArrays();
+        glBindVertexArray(vaoObject2);
+
+        // Use the same buffer object previously bound to GL_ARRAY_BUFFER.
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        int posDataOffset = Float.BYTES * 3 * (numberOfVertices / 2);
+        colorDataOffset += Float.BYTES * 4 * (numberOfVertices / 2);
+        glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, posDataOffset);
+        glVertexAttribPointer(1, 4, GL_FLOAT, false, 0, colorDataOffset);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject);
+
+        glBindVertexArray(0);
+    }
+
 
     private void loop() throws IOException, URISyntaxException {
         // This line is critical for LWJGL's interoperation with GLFW's
@@ -303,6 +380,7 @@ public class MatrixProjection {
         glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
         initializeProgram();
         initializeVertexBuffer();
+        initializeVertexArrayObjects();
 
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -312,32 +390,31 @@ public class MatrixProjection {
         // the window or has pressed the ESCAPE key.
         while (glfwWindowShouldClose(window) == GL_FALSE) {
 
+            glViewport(0, 0, WIDTH, HEIGHT);
+
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
 
             glUseProgram(theProgram);
 
-            glUniform2f(offsetLocation, 0.5f, 0.75f);
-
             final float near = 0.5f;
             final float far = 3f;
             FloatBuffer matrixBuffer = BufferUtils.createFloatBuffer(16);
-            matrixBuffer.put(new float[]{1f, 0f, 0f, 0f});
+            matrixBuffer.put(new float[]{(float) HEIGHT / WIDTH, 0f, 0f, 0f});
             matrixBuffer.put(new float[]{0f, 1f, 0f, 0f});
-            matrixBuffer.put(new float[]{0f, 0f, (near + far) / (far - near), 1f});
+            matrixBuffer.put(new float[]{0f, 0f, (near + far) / (near - far), -1f});
             matrixBuffer.put(new float[]{0f, 0f, 2 * near * far / (near - far), 0f});
             matrixBuffer.flip();
             glUniformMatrix4fv(matrixLocation, false, matrixBuffer);
 
-            glBindBuffer(GL15.GL_ARRAY_BUFFER, positionBufferObject);
-            glEnableVertexAttribArray(0);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(0, 4, GL_FLOAT, false, 0, 0);
-            glVertexAttribPointer(1, 4, GL_FLOAT, false, 0, Float.BYTES * 4 * 36);
+            glBindVertexArray(vaoObject1);
+            glUniform3f(offsetLocation, 0.0f, 0.0f, 0.0f);
+            glDrawElements(GL_TRIANGLES, indexData.length, GL_UNSIGNED_SHORT, 0);
 
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(vaoObject2);
+            glUniform3f(offsetLocation, 0.0f, 0.0f, -1.0f);
+            glDrawElements(GL_TRIANGLES, indexData.length, GL_UNSIGNED_SHORT, 0);
 
-            glDisableVertexAttribArray(0);
-            glDisableVertexAttribArray(1);
+            glBindVertexArray(0);
             glUseProgram(0);
 
             glfwSwapBuffers(window); // swap the color buffers
@@ -350,6 +427,6 @@ public class MatrixProjection {
     }
 
     public static void main(String[] args) {
-        new MatrixProjection().run();
+        new MultiObjects().run();
     }
 }
