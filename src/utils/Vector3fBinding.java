@@ -21,13 +21,10 @@ import java.util.function.Supplier;
 public class Vector3fBinding extends ObservableValueBase<Vector3f> implements Binding<Vector3f> {
 
     private Supplier<Vector3f> func;
-
     private Vector3f value;
     private boolean valid = false;
     private BindingHelperObserver observer;
     private ExpressionHelper<Vector3f> helper = null;
-
-
 
     @Override
     public void addListener(InvalidationListener listener) {
@@ -49,13 +46,6 @@ public class Vector3fBinding extends ObservableValueBase<Vector3f> implements Bi
         helper = ExpressionHelper.removeListener(helper, listener);
     }
 
-    /**
-     * Start observing the dependencies for changes. If the value of one of the
-     * dependencies changes, the binding is marked as invalid.
-     *
-     * @param dependencies
-     *            the dependencies to observe
-     */
     protected final void bind(Supplier<Vector3f> func, Observable... dependencies) {
         if (func != null && dependencies != null && dependencies.length > 0) {
             this.func = func;
@@ -68,12 +58,6 @@ public class Vector3fBinding extends ObservableValueBase<Vector3f> implements Bi
         }
     }
 
-    /**
-     * Stop observing the dependencies for changes.
-     *
-     * @param dependencies
-     *            the dependencies to stop observing
-     */
     protected final void unbind(Observable... dependencies) {
         if (observer != null) {
             for (final Observable dep : dependencies) {
