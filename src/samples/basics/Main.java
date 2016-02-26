@@ -5,6 +5,7 @@ import org.lwjgl.Sys;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.glfw.GLFWvidmode;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GLContext;
@@ -35,30 +36,42 @@ public class Main {
 
     private int positionBufferObject;
 
-    private int theProgram;
+            private int theProgram;
 
-    private final float[] vertexPositions = {
-            0.5f, 0.75f, 0.0f, 1.0f,
-            0.75f, -0.75f, 0.0f, 1.0f,
-            -0.75f, -0.75f, 0.0f, 1.0f
-    };
+            private final float[] vertexPositions = {
+                    0.5f, 0.75f, 0.0f, 1.0f,
+                    0.75f, -0.75f, 0.0f, 1.0f,
+                    -0.75f, -0.75f, 0.0f, 1.0f
+            };
 
-    public void run() {
-        System.out.println("Hello LWJGL " + Sys.getVersion() + "!");
+        public void run() {
+            System.out.println("Hello LWJGL " + Sys.getVersion() + "!");
 
-        try {
-            init();
-            loop();
+            try {
+                init();
+                loop();
 
-            // Release window and window callbacks
-            glfwDestroyWindow(window);
-            keyCallback.release();
-        } catch (IOException | URISyntaxException e) {
-            e.printStackTrace();
-        } finally {
-            // Terminate GLFW and release the GLFWerrorfun
-            glfwTerminate();
-            errorCallback.release();
+                // Release window and window callbacks
+                glfwDestroyWindow(window);
+                keyCallback.release();
+            } catch (IOException | URISyntaxException e) {
+                e.printStackTrace();
+            } finally {
+                // Terminate GLFW and release the GLFWerrorfun
+                glfwTerminate();
+                errorCallback.release();
+        }
+    }
+
+    private void printInfo() {
+        System.out.println();
+        System.out.println("-----------------------------------------------------------");
+
+        System.out.format("%-18s%s\n", "Running:", getClass().getName());
+        System.out.format("%-18s%s\n", "OpenGL version:", glGetString(GL_VERSION));
+
+        if (!GL.getCapabilities().OpenGL33) {
+            System.out.println("You must have at least OpenGL 3.3 to run this tutorial.");
         }
     }
 
@@ -203,6 +216,8 @@ public class Main {
         // creates the ContextCapabilities instance and makes the OpenGL
         // bindings available for use.
         GLContext.createFromCurrent();
+
+        printInfo();
 
         // Set the clear color
         glClearColor(1.0f, 1.0f, 0.0f, 0.0f);

@@ -1,14 +1,8 @@
 package utils;
 
-import javafx.beans.property.FloatProperty;
-import javafx.beans.property.SimpleFloatProperty;
+import java.util.function.Function;
 
-import static utils.VBindings.add;
-import static utils.VBindings.linear;
-import static utils.VBindings.multiply;
-import static utils.Vector3fConstant.CONST_X;
-import static utils.Vector3fConstant.CONST_Y;
-import static utils.Vector3fConstant.CONST_Z;
+import static utils.Vector3f.ZERO;
 
 /**
  * Created by strunov on 9/8/2015.
@@ -17,25 +11,29 @@ public class Test {
 
     public static void main(String[] args) {
 
-        FloatProperty ap = new SimpleFloatProperty(1);
-        FloatProperty bp = new SimpleFloatProperty(1);
-        FloatProperty gp = new SimpleFloatProperty(1);
+        Function<Float, Vector3f> test = (f) -> {
+            Vector3f v = new Vector3f(10f, 34.5f, -3.8f);
+            Matrix4f m = new Matrix4f(12, f, 4, 6, 5.6f, 3.4f, 4.5f, 4, 10, -1, 0, -4, 0.5f, 2, 3, 4);
+            return m.multiply(v);
+        };
 
-        Vector3fProperty v = new Vector3fProperty();
-        v.bind(linear(ap, bp, gp));
+        for (int i = 0; i < 10000000; i++) {
+            test.apply((float) i);
+        }
 
-        /*v.addListener((m, o, n) -> {
-            System.out.println(o + " -> " + n);
-        });*/
+        long start = System.currentTimeMillis();
 
-        System.out.println(v.getValue());
 
-        ap.setValue(5);
-        bp.setValue(4);
-        gp.setValue(3);
+        for (int i = 0; i < 1000000000; i++) {
+//            Vector3f v = ZERO;
+//            for (int j = 0; j < 10; j++) {
+                test.apply((float) i);
+//            }
+        }
 
-        System.out.println(v.getValue());
+        System.out.println(System.currentTimeMillis() - start);
 
     }
+
 }
 
